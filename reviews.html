@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reviews — ORBIT</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a href="index.html" class="brand"><span class="ring"></span>ORBIT</a>
+    <nav class="main-nav">
+      <a href="index.html">Home</a>
+      <a href="shop.html">Shop</a>
+      <a href="reviews.html" class="active">Reviews</a>
+      <a href="game.html">Game</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+    <div style="display:flex; align-items:center; gap:14px;">
+      <a href="cart.html" class="cart-link">Cart (<span data-cart-count>0</span>)</a>
+      <button class="nav-toggle" aria-label="Menu">☰</button>
+    </div>
+  </div>
+</header>
+
+<section style="padding-bottom:0;">
+  <div class="wrap">
+    <div class="eyebrow-num">Customer Notes</div>
+    <h2>What orbit's wearers say</h2>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="review-grid" id="reviewGrid"></div>
+  </div>
+</section>
+
+<section style="border-top:1px solid var(--line);">
+  <div class="wrap" style="max-width:640px;">
+    <h2 style="margin-bottom:26px;">Leave a review</h2>
+    <form id="reviewForm">
+      <div class="field">
+        <label for="productSelect">Which piece?</label>
+        <select id="productSelect" required></select>
+      </div>
+      <div class="field">
+        <label for="rName">Your name</label>
+        <input id="rName" type="text" required placeholder="Jordan M.">
+      </div>
+      <div class="field">
+        <label for="rRating">Rating</label>
+        <select id="rRating" required>
+          <option value="5">★★★★★ — Excellent</option>
+          <option value="4">★★★★☆ — Good</option>
+          <option value="3">★★★☆☆ — Okay</option>
+          <option value="2">★★☆☆☆ — Not great</option>
+          <option value="1">★☆☆☆☆ — Poor</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="rComment">Your review</label>
+        <textarea id="rComment" rows="4" required placeholder="Tell us about the fit, fabric, and how it's held up."></textarea>
+      </div>
+      <button class="btn" type="submit">Submit review</button>
+      <p id="reviewMsg" style="display:none; color:var(--ion); margin-top:14px; font-size:0.9rem;">Thanks — your review is live.</p>
+    </form>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 ORBIT. In constant motion.</span>
+    <a href="admin/login.html">Admin</a>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/store.js"></script>
+<script src="js/motion.js"></script>
+<script>
+(async function(){
+  document.getElementById('reviewGrid').innerHTML = '<p class="empty-note">Loading…</p>';
+
+  const products = await STORE.getProducts();
+  document.getElementById('productSelect').innerHTML = products.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+
+  async function renderReviews(){
+    const reviews = await STORE.getReviews();
+    document.getElementById('reviewGrid').innerHTML = reviews.map(r => {
+      const p = products.find(pr => pr.id === r.productId);
+      return `
+        <div class="review-card">
+          <div class="stars">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</div>
+          <p>${r.comment}</p>
+          <div class="review-name">${r.name} ${p ? '— ' + p.name : ''}</div>
+        </div>
+      `;
+    }).join('');
+    window.ORBIT.applyReveal();
+  }
+  await renderReviews();
+
+  document.getElementById('reviewForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await STORE.addReview({
+      productId: document.getElementById('productSelect').value,
+      name: document.getElementById('rName').value.trim(),
+      rating: parseInt(document.getElementById('rRating').value),
+      comment: document.getElementById('rComment').value.trim()
+    });
+    await renderReviews();
+    document.getElementById('reviewForm').reset();
+    document.getElementById('reviewMsg').style.display = 'block';
+    setTimeout(() => document.getElementById('reviewMsg').style.display = 'none', 3000);
+  });
+})();
+</script>
+</body>
+</html>

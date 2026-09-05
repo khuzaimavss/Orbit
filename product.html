@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Product — ORBIT</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a href="index.html" class="brand"><span class="ring"></span>ORBIT</a>
+    <nav class="main-nav">
+      <a href="index.html">Home</a>
+      <a href="shop.html" class="active">Shop</a>
+      <a href="reviews.html">Reviews</a>
+      <a href="game.html">Game</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+    <div style="display:flex; align-items:center; gap:14px;">
+      <a href="cart.html" class="cart-link">Cart (<span data-cart-count>0</span>)</a>
+      <button class="nav-toggle" aria-label="Menu">☰</button>
+    </div>
+  </div>
+</header>
+
+<section id="detailSection"></section>
+
+<section>
+  <div class="wrap">
+    <div class="section-head"><h2>What people say</h2></div>
+    <div class="review-grid" id="productReviews"></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 ORBIT. In constant motion.</span>
+    <a href="admin/login.html">Admin</a>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/store.js"></script>
+<script src="js/motion.js"></script>
+<script>
+(async function(){
+  const id = new URLSearchParams(location.search).get('id');
+  const section = document.getElementById('detailSection');
+  section.innerHTML = '<div class="wrap"><p class="empty-note">Loading…</p></div>';
+  const product = await STORE.getProduct(id);
+
+  if(!product){
+    section.innerHTML = `<div class="wrap"><p class="empty-note">We couldn't find that piece. <a href="shop.html" style="text-decoration:underline;">Back to shop →</a></p></div>`;
+  } else {
+    section.innerHTML = `
+      <div class="wrap">
+        <div class="eyebrow-num"><a href="shop.html">Shop</a> / ${product.category}</div>
+        <div class="detail-grid">
+          <div class="detail-photo"><img src="${product.image}" alt="${product.name}"></div>
+          <div>
+            <h1 style="font-size:2.2rem;">${product.name}</h1>
+            <div class="detail-price">$${product.price}</div>
+            <p class="detail-desc">${product.description || ''}</p>
+            ${product.inStock ? `
+              <div class="qty-row">
+                <span style="font-size:0.9rem; color:var(--paper-dim);">Quantity</span>
+                <div class="qty-box">
+                  <button id="qtyMinus">−</button>
+                  <input id="qtyInput" type="number" value="1" min="1">
+                  <button id="qtyPlus">+</button>
+                </div>
+              </div>
+              <button class="btn btn-block" id="addBtn">Add to cart</button>
+              <p id="addedMsg" style="display:none; color:var(--ion); margin-top:12px; font-size:0.9rem;">Added to cart.</p>
+            ` : `<button class="btn btn-block" disabled>Out of stock</button>`}
+          </div>
+        </div>
+      </div>
+    `;
+
+    if(product.inStock){
+      const qtyInput = document.getElementById('qtyInput');
+      document.getElementById('qtyMinus').addEventListener('click', () => {
+        qtyInput.value = Math.max(1, parseInt(qtyInput.value || 1) - 1);
+      });
+      document.getElementById('qtyPlus').addEventListener('click', () => {
+        qtyInput.value = parseInt(qtyInput.value || 1) + 1;
+      });
+      document.getElementById('addBtn').addEventListener('click', () => {
+        STORE.addToCart(product.id, Math.max(1, parseInt(qtyInput.value || 1)));
+        document.getElementById('addedMsg').style.display = 'block';
+      });
+    }
+  }
+
+  const reviews = (await STORE.getReviews()).filter(r => r.productId === id);
+  const reviewGrid = document.getElementById('productReviews');
+  reviewGrid.innerHTML = reviews.length ? reviews.map(r => `
+    <div class="review-card">
+      <div class="stars">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</div>
+      <p>${r.comment}</p>
+      <div class="review-name">${r.name}</div>
+    </div>
+  `).join('') : '<p class="empty-note">No reviews yet for this piece — be the first from the <a href="reviews.html" style="text-decoration:underline;">reviews page</a>.</p>';
+  window.ORBIT.applyReveal();
+})();
+</script>
+</body>
+</html>

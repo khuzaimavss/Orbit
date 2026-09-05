@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ORBIT — Engineered Essentials</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  #splash{
+    position:fixed; inset:0; z-index:9999;
+    background: var(--void);
+    display:flex; align-items:center; justify-content:center;
+    transition: opacity .6s ease, visibility .6s ease;
+  }
+  #splash.hide{ opacity:0; visibility:hidden; pointer-events:none; }
+  #splash svg{ width:180px; height:180px; overflow:visible; }
+  #splash .ring-faint{ fill:none; stroke:rgba(243,242,238,0.1); stroke-width:1; }
+  #splash .ring-draw1{
+    fill:none; stroke:#E3A857; stroke-width:2; stroke-linecap:round;
+    stroke-dasharray: 340; stroke-dashoffset: 340;
+    animation: draw-ring 1.3s cubic-bezier(.16,1,.3,1) forwards;
+  }
+  #splash .ring-draw2{
+    fill:none; stroke:#5FA9E0; stroke-width:1.5; stroke-linecap:round;
+    stroke-dasharray: 280; stroke-dashoffset: 280;
+    animation: draw-ring 1.3s cubic-bezier(.16,1,.3,1) forwards .15s;
+  }
+  #splash .core{
+    fill:#F3F2EE;
+    animation: core-pulse 1.8s ease-in-out infinite .6s;
+  }
+  #splash .sat-group1{
+    transform-origin: 90px 90px;
+    opacity:0;
+    animation: orbit-spin 2.2s linear infinite, fade-in .3s ease forwards .5s;
+  }
+  #splash .sat-group2{
+    transform-origin: 90px 90px;
+    opacity:0;
+    animation: orbit-spin-rev 3.1s linear infinite, fade-in .3s ease forwards .75s;
+  }
+  #splash .satellite-a{ fill:#E3A857; filter: drop-shadow(0 0 5px rgba(227,168,87,0.85)); }
+  #splash .satellite-b{ fill:#5FA9E0; filter: drop-shadow(0 0 4px rgba(95,169,224,0.8)); }
+  #splash .wordmark{
+    fill:#F3F2EE; font-family:'Space Grotesk', sans-serif; font-weight:700;
+    font-size:16px; letter-spacing:4px;
+    opacity:0; animation: fade-in .6s ease forwards 1s;
+  }
+  #splash .subline{
+    fill:#B9B8B4; font-family:'Work Sans', sans-serif; font-size:9px; letter-spacing:2px;
+    opacity:0; animation: fade-in .6s ease forwards 1.2s;
+  }
+  @keyframes draw-ring{ to{ stroke-dashoffset:0; } }
+  @keyframes fade-in{ to{ opacity:1; } }
+  @keyframes orbit-spin{ from{ transform:rotate(0deg);} to{ transform:rotate(360deg);} }
+  @keyframes orbit-spin-rev{ from{ transform:rotate(0deg);} to{ transform:rotate(-360deg);} }
+  @keyframes core-pulse{ 0%,100%{ opacity:1; } 50%{ opacity:0.55; } }
+  body.loading{ overflow:hidden; }
+</style>
+</head>
+<body class="loading">
+
+<div id="splash">
+  <svg viewBox="0 0 180 180">
+    <circle class="ring-faint" cx="90" cy="90" r="72"></circle>
+    <circle class="ring-draw1" cx="90" cy="90" r="54"></circle>
+    <circle class="ring-draw2" cx="90" cy="90" r="66"></circle>
+    <circle class="core" cx="90" cy="90" r="5.5"></circle>
+    <g class="sat-group1"><circle class="satellite-a" cx="90" cy="36" r="4"></circle></g>
+    <g class="sat-group2"><circle class="satellite-b" cx="90" cy="24" r="3"></circle></g>
+    <text class="wordmark" x="90" y="150" text-anchor="middle">ORBIT</text>
+    <text class="subline" x="90" y="164" text-anchor="middle">ENGINEERED ESSENTIALS</text>
+  </svg>
+</div>
+
+<header class="site-header">
+  <div class="wrap">
+    <a href="index.html" class="brand"><span class="ring"></span>ORBIT</a>
+    <nav class="main-nav">
+      <a href="index.html" class="active">Home</a>
+      <a href="shop.html">Shop</a>
+      <a href="reviews.html">Reviews</a>
+      <a href="game.html">Game</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+    <div style="display:flex; align-items:center; gap:14px;">
+      <a href="cart.html" class="cart-link">Cart (<span data-cart-count>0</span>)</a>
+      <button class="nav-toggle" aria-label="Menu">☰</button>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <div>
+      <div class="hero-tag">Cycle 004 — Autumn Transmission</div>
+      <h1>Clothes engineered for the orbit you actually keep.</h1>
+      <p class="lede">ORBIT designs a small, considered wardrobe each season — outerwear, tops, bottoms, and the few accessories worth carrying. No drops, no noise, just pieces built to stay in rotation.</p>
+      <div class="hero-actions">
+        <a href="shop.html" class="btn">Enter the shop</a>
+        <a href="#featured" class="btn btn-outline">See featured</a>
+      </div>
+    </div>
+    <div class="hero-plate">
+      <svg viewBox="0 0 500 620" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="glow" x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur stdDeviation="4" result="blur"/>
+            <feMerge>
+              <feMergeNode in="blur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+        <rect width="500" height="620" fill="#141519"/>
+        <g class="orbit-ring-outer" style="transform-box:fill-box; transform-origin:center;">
+          <circle cx="250" cy="300" r="250" fill="none" stroke="#F3F2EE" stroke-width="0.75" stroke-dasharray="1 12" opacity="0.15"/>
+        </g>
+        <g class="orbit-ring-mid" style="transform-box:fill-box; transform-origin:center;">
+          <circle cx="250" cy="300" r="200" fill="none" stroke="#5FA9E0" stroke-width="1" stroke-dasharray="1 10" opacity="0.35"/>
+          <circle cx="250" cy="100" r="4" fill="#5FA9E0" filter="url(#glow)"/>
+        </g>
+        <g class="orbit-ring-inner" style="transform-box:fill-box; transform-origin:center;">
+          <circle cx="250" cy="300" r="150" fill="none" stroke="#E3A857" stroke-width="1" stroke-dasharray="2 8" opacity="0.55"/>
+          <circle cx="250" cy="150" r="5" fill="#E3A857" filter="url(#glow)"/>
+        </g>
+        <circle cx="250" cy="300" r="14" fill="#F3F2EE" filter="url(#glow)"/>
+        <text x="30" y="55" font-family="Space Grotesk, sans-serif" font-size="13" letter-spacing="2" fill="#F3F2EE" opacity="0.8">ORBIT — AW TRANSMISSION</text>
+        <line x1="30" y1="580" x2="470" y2="580" stroke="#F3F2EE" stroke-opacity="0.25"/>
+        <text x="30" y="565" font-family="Space Grotesk, sans-serif" font-size="12" letter-spacing="1" fill="#F3F2EE" opacity="0.6">CYCLE 004 / ENGINEERED ESSENTIALS</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="section-head"><h2>Find your way in</h2></div>
+    <div class="quick-grid">
+      <a class="quick-card" href="shop.html">
+        <span class="num">01</span>
+        <h3>Shop the collection</h3>
+      </a>
+      <a class="quick-card" href="reviews.html">
+        <span class="num">02</span>
+        <h3>Read the reviews</h3>
+      </a>
+      <a class="quick-card" href="game.html">
+        <span class="num">03</span>
+        <h3>Play &amp; win a code</h3>
+      </a>
+      <a class="quick-card" href="contact.html">
+        <span class="num">04</span>
+        <h3>Get in touch</h3>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section id="featured">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Featured this season</h2>
+      <a href="shop.html">View all →</a>
+    </div>
+    <div class="product-grid" id="featuredGrid"></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 ORBIT. In constant motion.</span>
+    <a href="admin/login.html">Admin</a>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/store.js"></script>
+<script src="js/motion.js"></script>
+<script>
+(async function(){
+  const grid = document.getElementById('featuredGrid');
+  const products = (await STORE.getProducts()).slice(0, 4);
+  grid.innerHTML = products.map(p => `
+    <a class="product-card" href="product.html?id=${p.id}">
+      <div class="product-photo">
+        ${!p.inStock ? '<span class="tag out">Out of stock</span>' : ''}
+        <img src="${p.image}" alt="${p.name}">
+      </div>
+      <div class="product-name">${p.name}</div>
+      <div class="product-meta"><span>${p.category}</span><span>$${p.price}</span></div>
+    </a>
+  `).join('');
+
+  window.ORBIT.applyReveal();
+
+  // hide splash once products are ready (minimum 2s so the full animation plays out)
+  setTimeout(() => {
+    document.getElementById('splash').classList.add('hide');
+    document.body.classList.remove('loading');
+  }, 2000);
+})();
+</script>
+</body>
+</html>

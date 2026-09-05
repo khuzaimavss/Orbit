@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Products — ORBIT Admin</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<div class="admin-shell">
+  <div class="admin-side">
+    <a href="../index.html" class="brand"><span class="ring"></span>ORBIT</a>
+    <a href="products.html" class="active">Products</a>
+    <a href="analytics.html">Analytics</a>
+    <a href="bg-removal.html">Background Removal</a>
+    <a href="#" id="logoutLink">Log out</a>
+  </div>
+
+  <div class="admin-main">
+    <div class="admin-top">
+      <div>
+        <div class="eyebrow-num" style="border:none; margin:0;">Admin / Products</div>
+        <h2>Product management</h2>
+      </div>
+      <button class="btn" id="newProductBtn">+ New product</button>
+    </div>
+
+    <table class="admin-table">
+      <thead>
+        <tr><th>Photo</th><th>Name</th><th>Category</th><th>Price</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody id="productRows"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h3 id="modalTitle">New product</h3>
+    <form id="productForm">
+      <input type="hidden" id="pId">
+      <div class="field"><label for="pName">Name</label><input id="pName" required></div>
+      <div class="field"><label for="pCategory">Category</label><input id="pCategory" required placeholder="Outerwear"></div>
+      <div class="field"><label for="pPrice">Price (USD)</label><input id="pPrice" type="number" step="0.01" min="0" required></div>
+      <div class="field"><label for="pDescription">Description</label><textarea id="pDescription" rows="3"></textarea></div>
+      <div class="field">
+        <label for="pPhoto">Photo</label>
+        <input id="pPhoto" type="file" accept="image/*">
+        <p style="font-size:0.78rem; color:var(--paper-dim); margin-top:6px;">No photo? A generated catalog illustration is used automatically. Need a clean white background? Use the <a href="bg-removal.html" style="text-decoration:underline;">Background Removal tool</a> first, then upload the result here.</p>
+        <img id="pPreview" style="margin-top:10px; width:90px; height:110px; object-fit:cover; border:1px solid var(--line); display:none;">
+      </div>
+      <div class="field">
+        <label style="display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" id="pInStock" style="width:auto;" checked> In stock
+        </label>
+      </div>
+      <div style="display:flex; gap:12px; margin-top:20px;">
+        <button type="submit" class="btn" style="flex:1;">Save product</button>
+        <button type="button" class="btn btn-outline" id="cancelBtn">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="../js/supabase-config.js"></script>
+<script src="../js/store.js"></script>
+<script src="../js/motion.js"></script>
+<script>
+  STORE.requireAdmin('login.html');
+  document.getElementById('logoutLink').addEventListener('click', async (e) => {
+    e.preventDefault(); await STORE.adminLogout(); location.href = 'login.html';
+  });
+
+  const modalBg = document.getElementById('modalBg');
+  const form = document.getElementById('productForm');
+  let pendingImage = null;
+
+  function openModal(product){
+    document.getElementById('modalTitle').textContent = product ? 'Edit product' : 'New product';
+    document.getElementById('pId').value = product ? product.id : '';
+    document.getElementById('pName').value = product ? product.name : '';
+    document.getElementById('pCategory').value = product ? product.category : '';
+    document.getElementById('pPrice').value = product ? product.price : '';
+    document.getElementById('pDescription').value = product ? (product.description || '') : '';
+    document.getElementById('pInStock').checked = product ? product.inStock : true;
+    pendingImage = product ? product.image : null;
+    const preview = document.getElementById('pPreview');
+    if(pendingImage){ preview.src = pendingImage; preview.style.display = 'block'; } else { preview.style.display = 'none'; }
+    document.getElementById('pPhoto').value = '';
+    modalBg.classList.add('show');
+  }
+  function closeModal(){ modalBg.classList.remove('show'); }
+
+  document.getElementById('newProductBtn').addEventListener('click', () => openModal(null));
+  document.getElementById('cancelBtn').addEventListener('click', closeModal);
+  modalBg.addEventListener('click', (e) => { if(e.target === modalBg) closeModal(); });
+
+  document.getElementById('pPhoto').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      pendingImage = reader.result;
+      const preview = document.getElementById('pPreview');
+      preview.src = pendingImage; preview.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  async function renderRows(){
+    const products = await STORE.getProducts();
+    document.getElementById('productRows').innerHTML = products.map(p => `
+      <tr>
+        <td><img src="${p.image}" alt=""></td>
+        <td>${p.name}</td>
+        <td>${p.category}</td>
+        <td>$${p.price}</td>
+        <td><span class="pill ${p.inStock ? 'in' : 'out'}">${p.inStock ? 'In stock' : 'Out of stock'}</span></td>
+        <td style="white-space:nowrap;">
+          <button class="btn-sm btn btn-outline" data-edit="${p.id}">Edit</button>
+          <button class="btn-sm btn btn-outline" data-toggle="${p.id}">${p.inStock ? 'Mark out' : 'Mark in'}</button>
+          <button class="link-btn" data-delete="${p.id}" style="margin-left:8px;">Delete</button>
+        </td>
+      </tr>
+    `).join('') || `<tr><td colspan="6" class="empty-note">No products yet.</td></tr>`;
+
+    document.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', async () => openModal(await STORE.getProduct(b.dataset.edit))));
+    document.querySelectorAll('[data-toggle]').forEach(b => b.addEventListener('click', async () => {
+      const p = await STORE.getProduct(b.dataset.toggle);
+      p.inStock = !p.inStock;
+      await STORE.upsertProduct(p);
+      renderRows();
+    }));
+    document.querySelectorAll('[data-delete]').forEach(b => b.addEventListener('click', async () => {
+      if(confirm('Delete this product?')){ await STORE.deleteProduct(b.dataset.delete); renderRows(); }
+    }));
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const submitBtn = form.querySelector('button[type="submit"]');
+    submitBtn.disabled = true; submitBtn.textContent = 'Saving…';
+
+    const id = document.getElementById('pId').value;
+    const name = document.getElementById('pName').value.trim();
+    const category = document.getElementById('pCategory').value.trim();
+    const products = await STORE.getProducts();
+    const image = pendingImage || STORE.plate(name, category, products.length + 1);
+    await STORE.upsertProduct({
+      id: id || STORE.uid(),
+      name,
+      category,
+      price: parseFloat(document.getElementById('pPrice').value),
+      description: document.getElementById('pDescription').value.trim(),
+      inStock: document.getElementById('pInStock').checked,
+      image
+    });
+
+    submitBtn.disabled = false; submitBtn.textContent = 'Save product';
+    closeModal();
+    renderRows();
+  });
+
+  renderRows();
+
+  // pick up an image handed off from the background-removal tool
+  if(new URLSearchParams(location.search).get('fromBg') === '1'){
+    const pending = sessionStorage.getItem('orbit_pending_bg_image');
+    if(pending){
+      sessionStorage.removeItem('orbit_pending_bg_image');
+      openModal(null);
+      pendingImage = pending;
+      const preview = document.getElementById('pPreview');
+      preview.src = pendingImage; preview.style.display = 'block';
+    }
+  }
+</script>
+</body>
+</html>

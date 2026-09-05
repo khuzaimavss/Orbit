@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Background Removal — ORBIT Admin</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<div class="admin-shell">
+  <div class="admin-side">
+    <a href="../index.html" class="brand"><span class="ring"></span>ORBIT</a>
+    <a href="products.html">Products</a>
+    <a href="analytics.html">Analytics</a>
+    <a href="bg-removal.html" class="active">Background Removal</a>
+    <a href="#" id="logoutLink">Log out</a>
+  </div>
+
+  <div class="admin-main">
+    <div class="admin-top">
+      <div>
+        <div class="eyebrow-num" style="border:none; margin:0;">Admin / Background Removal</div>
+        <h2>Clean up a product photo</h2>
+      </div>
+    </div>
+
+    <p style="color:var(--paper-dim); max-width:64ch; margin-bottom:30px;">
+      Upload a raw photo and this tool strips a plain background out to white by flood-filling from the edges —
+      good enough for quick, evenly-lit product shots. It's a lightweight color-based approach, not a trained
+      segmentation model: busy or shadowed backgrounds may need a higher threshold, and true studio-grade
+      cutouts are better served by a dedicated API (e.g. remove.bg or Photoroom) wired up on a backend.
+    </p>
+
+    <div class="field" style="max-width:420px;">
+      <label for="fileInput">Raw product photo</label>
+      <input id="fileInput" type="file" accept="image/*">
+    </div>
+
+    <div id="workArea" style="display:none;">
+      <div class="field" style="max-width:420px;">
+        <label for="threshold">Sensitivity — <span id="threshVal">32</span></label>
+        <input id="threshold" type="range" min="8" max="90" value="32">
+      </div>
+
+      <div class="bg-canvas-row" style="margin:24px 0;">
+        <div>
+          <h3 style="margin-bottom:10px; font-size:1rem;">Original</h3>
+          <div class="bg-canvas-wrap"><canvas id="srcCanvas"></canvas></div>
+        </div>
+        <div>
+          <h3 style="margin-bottom:10px; font-size:1rem;">Preview — white background</h3>
+          <div class="bg-canvas-wrap"><canvas id="outCanvas"></canvas></div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:12px;">
+        <button class="btn btn-outline" id="redoBtn">Redo with current sensitivity</button>
+        <button class="btn btn-forest" id="saveBtn">Use for a product</button>
+      </div>
+      <p id="savedMsg" style="display:none; color:var(--ion); margin-top:14px; font-size:0.9rem;"></p>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="../js/supabase-config.js"></script>
+<script src="../js/store.js"></script>
+<script src="../js/motion.js"></script>
+<script>
+  STORE.requireAdmin('login.html');
+  document.getElementById('logoutLink').addEventListener('click', async (e) => {
+    e.preventDefault(); await STORE.adminLogout(); location.href = 'login.html';
+  });
+
+  const fileInput = document.getElementById('fileInput');
+  const srcCanvas = document.getElementById('srcCanvas');
+  const outCanvas = document.getElementById('outCanvas');
+  const workArea = document.getElementById('workArea');
+  const thresholdInput = document.getElementById('threshold');
+  const threshVal = document.getElementById('threshVal');
+  let sourceImage = null;
+
+  thresholdInput.addEventListener('input', () => threshVal.textContent = thresholdInput.value);
+
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const img = new Image();
+    img.onload = () => {
+      sourceImage = img;
+      const maxDim = 500;
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+      [srcCanvas, outCanvas].forEach(c => { c.width = w; c.height = h; });
+      srcCanvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      workArea.style.display = 'block';
+      document.getElementById('savedMsg').style.display = 'none';
+      process();
+    };
+    img.src = URL.createObjectURL(file);
+  });
+
+  function process(){
+    const w = srcCanvas.width, h = srcCanvas.height;
+    const srcCtx = srcCanvas.getContext('2d');
+    const imgData = srcCtx.getImageData(0, 0, w, h);
+    const data = imgData.data;
+    const threshold = parseInt(thresholdInput.value);
+
+    // sample background color from the four corners
+    const corners = [[0,0],[w-1,0],[0,h-1],[w-1,h-1]];
+    let cr=0, cg=0, cb=0;
+    corners.forEach(([x,y]) => {
+      const i = (y*w+x)*4;
+      cr += data[i]; cg += data[i+1]; cb += data[i+2];
+    });
+    cr/=4; cg/=4; cb/=4;
+
+    // flood fill from all edge pixels that are close to the background color
+    const visited = new Uint8Array(w*h);
+    const toRemove = new Uint8Array(w*h);
+    const queue = [];
+    function dist(i){
+      const dr = data[i]-cr, dg = data[i+1]-cg, db = data[i+2]-cb;
+      return Math.sqrt(dr*dr+dg*dg+db*db);
+    }
+    for(let x=0; x<w; x++){ queue.push([x,0]); queue.push([x,h-1]); }
+    for(let y=0; y<h; y++){ queue.push([0,y]); queue.push([w-1,y]); }
+
+    while(queue.length){
+      const [x,y] = queue.pop();
+      if(x<0||y<0||x>=w||y>=h) continue;
+      const idx = y*w+x;
+      if(visited[idx]) continue;
+      visited[idx] = 1;
+      const i = idx*4;
+      if(dist(i) <= threshold){
+        toRemove[idx] = 1;
+        queue.push([x+1,y],[x-1,y],[x,y+1],[x,y-1]);
+      }
+    }
+
+    const outData = new ImageData(new Uint8ClampedArray(data), w, h);
+    for(let idx=0; idx<w*h; idx++){
+      if(toRemove[idx]){
+        const i = idx*4;
+        outData.data[i] = 255; outData.data[i+1] = 255; outData.data[i+2] = 255; outData.data[i+3] = 255;
+      }
+    }
+    outCanvas.getContext('2d').putImageData(outData, 0, 0);
+  }
+
+  document.getElementById('redoBtn').addEventListener('click', process);
+
+  document.getElementById('saveBtn').addEventListener('click', () => {
+    const dataUrl = outCanvas.toDataURL('image/png');
+    sessionStorage.setItem('orbit_pending_bg_image', dataUrl);
+    document.getElementById('savedMsg').textContent = 'Saved. Opening the product form so you can attach this photo — pick "Choose file" only if you want to swap it, otherwise it is already set.';
+    document.getElementById('savedMsg').style.display = 'block';
+    setTimeout(() => { location.href = 'products.html?fromBg=1'; }, 900);
+  });
+</script>
+</body>
+</html>

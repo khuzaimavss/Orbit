@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shop — ORBIT</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a href="index.html" class="brand"><span class="ring"></span>ORBIT</a>
+    <nav class="main-nav">
+      <a href="index.html">Home</a>
+      <a href="shop.html" class="active">Shop</a>
+      <a href="reviews.html">Reviews</a>
+      <a href="game.html">Game</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+    <div style="display:flex; align-items:center; gap:14px;">
+      <a href="cart.html" class="cart-link">Cart (<span data-cart-count>0</span>)</a>
+      <button class="nav-toggle" aria-label="Menu">☰</button>
+    </div>
+  </div>
+</header>
+
+<section style="padding-bottom:0;">
+  <div class="wrap">
+    <div class="eyebrow-num">Full Catalog — <span id="resultCount">0</span> pieces</div>
+    <h2 style="margin-bottom:30px;">Shop the collection</h2>
+    <div class="filter-bar" id="filterBar"></div>
+  </div>
+</section>
+
+<section style="padding-top:0;">
+  <div class="wrap">
+    <div class="product-grid" id="productGrid"></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 ORBIT. In constant motion.</span>
+    <a href="admin/login.html">Admin</a>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/store.js"></script>
+<script src="js/motion.js"></script>
+<script>
+(async function(){
+  document.getElementById('productGrid').innerHTML = '<p class="empty-note">Loading…</p>';
+
+  const params = new URLSearchParams(location.search);
+  let activeCategory = params.get('category') || 'All';
+
+  const all = await STORE.getProducts();
+  const categories = ['All', ...Array.from(new Set(all.map(p => p.category)))];
+
+  function renderFilters(){
+    document.getElementById('filterBar').innerHTML = categories.map(c => `
+      <button class="filter-chip ${c === activeCategory ? 'active' : ''}" data-cat="${c}">${c}</button>
+    `).join('');
+    document.querySelectorAll('.filter-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        activeCategory = btn.dataset.cat;
+        renderFilters();
+        renderGrid();
+      });
+    });
+  }
+
+  function renderGrid(){
+    const list = activeCategory === 'All' ? all : all.filter(p => p.category === activeCategory);
+    document.getElementById('resultCount').textContent = list.length;
+    document.getElementById('productGrid').innerHTML = list.map(p => `
+      <a class="product-card" href="product.html?id=${p.id}">
+        <div class="product-photo">
+          ${!p.inStock ? '<span class="tag out">Out of stock</span>' : ''}
+          <img src="${p.image}" alt="${p.name}">
+        </div>
+        <div class="product-name">${p.name}</div>
+        <div class="product-meta"><span>${p.category}</span><span>$${p.price}</span></div>
+      </a>
+    `).join('') || '<p class="empty-note">No pieces in this category yet.</p>';
+    window.ORBIT.applyReveal();
+  }
+
+  renderFilters();
+  renderGrid();
+})();
+</script>
+</body>
+</html>

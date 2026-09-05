@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Login — ORBIT</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<div class="login-shell">
+  <div class="login-box">
+    <a href="../index.html" class="brand" style="display:block; margin-bottom:8px;"><span class="ring"></span>ORBIT</a>
+    <p style="color:var(--paper-dim); font-size:0.9rem; margin-bottom:30px;">Admin panel</p>
+    <form id="loginForm">
+      <div class="field"><label for="email">Email</label><input id="email" type="email" required></div>
+      <div class="field"><label for="pw">Password</label><input id="pw" type="password" required></div>
+      <button class="btn btn-block" type="submit">Log in</button>
+      <p id="err" style="display:none; color:var(--danger); font-size:0.85rem; margin-top:12px;"></p>
+    </form>
+    <p style="font-size:0.78rem; color:var(--paper-dim); margin-top:24px;">Log in with the email/password you added under Supabase → Authentication → Users.</p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="../js/supabase-config.js"></script>
+<script src="../js/store.js"></script>
+<script src="../js/motion.js"></script>
+<script>
+  // If already logged in, skip straight to the panel
+  STORE.onAdminState(user => { if(user){ location.href = 'products.html'; } });
+
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errEl = document.getElementById('err');
+    errEl.style.display = 'none';
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    submitBtn.disabled = true; submitBtn.textContent = 'Logging in…';
+    try{
+      await STORE.adminLogin(document.getElementById('email').value.trim(), document.getElementById('pw').value);
+      location.href = 'products.html';
+    }catch(err){
+      errEl.textContent = 'Login failed — check the email and password.';
+      errEl.style.display = 'block';
+      submitBtn.disabled = false; submitBtn.textContent = 'Log in';
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Game — ORBIT</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a href="index.html" class="brand"><span class="ring"></span>ORBIT</a>
+    <nav class="main-nav">
+      <a href="index.html">Home</a>
+      <a href="shop.html">Shop</a>
+      <a href="reviews.html">Reviews</a>
+      <a href="game.html" class="active">Game</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+    <div style="display:flex; align-items:center; gap:14px;">
+      <a href="cart.html" class="cart-link">Cart (<span data-cart-count>0</span>)</a>
+      <button class="nav-toggle" aria-label="Menu">☰</button>
+    </div>
+  </div>
+</header>
+
+<section style="padding-bottom:0;">
+  <div class="wrap">
+    <div class="eyebrow-num">Orbit Arcade</div>
+    <h2>Catch the orbit, earn a code</h2>
+    <p style="color:var(--paper-dim); max-width:56ch; margin:14px 0 34px;">Move the bag left and right to catch falling pieces. Reach 20 points before you miss 5 and we'll hand you a discount code to use at checkout.</p>
+  </div>
+</section>
+
+<section style="padding-top:0;">
+  <div class="wrap" style="max-width:760px;">
+    <div class="game-shell">
+      <div class="game-hud">
+        <span>Score: <strong id="scoreVal">0</strong></span>
+        <span>Misses: <strong id="missVal">0</strong> / 5</span>
+        <button class="btn btn-sm btn-outline" id="restartBtn">Restart</button>
+      </div>
+      <canvas id="gameCanvas" width="700" height="440"></canvas>
+      <p style="font-size:0.82rem; color:var(--paper-dim); margin-top:14px;">Controls: arrow keys, mouse, or drag on touch.</p>
+      <div class="game-reward" id="rewardBox">
+        <strong>You earned a discount code!</strong>
+        <p style="margin:8px 0 0; font-size:0.9rem;">Enter this at checkout: <span class="code-pill" id="codeVal"></span></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 ORBIT. In constant motion.</span>
+    <a href="admin/login.html">Admin</a>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/store.js"></script>
+<script src="js/motion.js"></script>
+<script>
+(function(){
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const scoreEl = document.getElementById('scoreVal');
+  const missEl = document.getElementById('missVal');
+  const rewardBox = document.getElementById('rewardBox');
+  const codeVal = document.getElementById('codeVal');
+
+  const W = canvas.width, H = canvas.height;
+  const WIN_SCORE = 20, MAX_MISSES = 5;
+
+  let bag, items, score, misses, running, spawnTimer, rewardGiven;
+
+  function reset(){
+    bag = { x: W/2 - 45, w: 90, h: 26, speed: 8 };
+    items = [];
+    score = 0; misses = 0; running = true; spawnTimer = 0; rewardGiven = false;
+    scoreEl.textContent = 0; missEl.textContent = 0;
+    rewardBox.classList.remove('show');
+  }
+
+  function spawnItem(){
+    const kinds = [
+      { shape:'shirt', color:'#0A0B0D' },
+      { shape:'pants', color:'#E3A857' },
+      { shape:'tag', color:'#5FA9E0' },
+      { shape:'sweater', color:'#E0705F' }
+    ];
+    const k = kinds[Math.floor(Math.random()*kinds.length)];
+    items.push({ x: Math.random()*(W-24)+12, y:-20, speed: 2.4 + Math.random()*2, rot: (Math.random()-0.5)*0.5, ...k });
+  }
+
+  function drawBag(){
+    const bx = bag.x, topY = H-64, bh = 46, bw = bag.w;
+
+    // handles
+    ctx.strokeStyle = '#0A0B0D';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(bx+bw*0.28, topY+4);
+    ctx.quadraticCurveTo(bx+bw*0.28, topY-18, bx+bw*0.5, topY-18);
+    ctx.quadraticCurveTo(bx+bw*0.72, topY-18, bx+bw*0.72, topY+4);
+    ctx.stroke();
+
+    // bag body — dark, on-brand, tapered paper-bag silhouette
+    ctx.fillStyle = '#141519';
+    ctx.strokeStyle = '#0A0B0D';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(bx+5, topY);
+    ctx.lineTo(bx+bw-5, topY);
+    ctx.lineTo(bx+bw, topY+bh);
+    ctx.lineTo(bx, topY+bh);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // top fold crease — amber accent line
+    ctx.beginPath();
+    ctx.moveTo(bx+5, topY+8);
+    ctx.lineTo(bx+bw-5, topY+8);
+    ctx.strokeStyle = 'rgba(227,168,87,0.7)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // center seam
+    ctx.beginPath();
+    ctx.moveTo(bx+bw/2, topY+8);
+    ctx.lineTo(bx+bw/2, topY+bh);
+    ctx.strokeStyle = 'rgba(243,242,238,0.18)';
+    ctx.stroke();
+
+    // brand wordmark
+    ctx.fillStyle = '#F3F2EE';
+    ctx.font = '700 11px "Space Grotesk", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('ORBIT', bx+bw/2, topY+bh/2+16);
+
+    bag.topY = topY; bag.bh = bh;
+  }
+
+  // small garment-shaped falling icons
+  function drawItem(it){
+    ctx.save();
+    ctx.translate(it.x, it.y);
+    ctx.rotate(it.rot);
+    ctx.fillStyle = it.color;
+
+    if(it.shape === 'shirt'){
+      ctx.beginPath();
+      ctx.moveTo(-9,-8); ctx.lineTo(-4,-11); ctx.lineTo(-2,-8);
+      ctx.lineTo(2,-8); ctx.lineTo(4,-11); ctx.lineTo(9,-8);
+      ctx.lineTo(9,-3); ctx.lineTo(6,-1); ctx.lineTo(6,9);
+      ctx.lineTo(-6,9); ctx.lineTo(-6,-1); ctx.lineTo(-9,-3);
+      ctx.closePath(); ctx.fill();
+    } else if(it.shape === 'pants'){
+      ctx.fillRect(-8,-9,16,5);
+      ctx.fillRect(-8,-4,6,14);
+      ctx.fillRect(2,-4,6,14);
+    } else if(it.shape === 'sweater'){
+      ctx.beginPath();
+      ctx.moveTo(-10,-6); ctx.lineTo(-6,-10); ctx.lineTo(-3,-8);
+      ctx.lineTo(3,-8); ctx.lineTo(6,-10); ctx.lineTo(10,-6);
+      ctx.lineTo(6,-2); ctx.lineTo(6,10); ctx.lineTo(-6,10);
+      ctx.lineTo(-6,-2); ctx.closePath(); ctx.fill();
+    } else {
+      // price tag
+      ctx.beginPath();
+      ctx.moveTo(-8,-5); ctx.lineTo(4,-5); ctx.lineTo(9,0);
+      ctx.lineTo(4,5); ctx.lineTo(-8,5); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.arc(-4,0,1.6,0,Math.PI*2);
+      ctx.fillStyle = '#FFFFFF'; ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function loop(){
+    if(!running) return;
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0,0,W,H);
+
+    spawnTimer++;
+    if(spawnTimer > 42){ spawnItem(); spawnTimer = 0; }
+
+    items.forEach(it => it.y += it.speed);
+    drawBag();
+    items.forEach(drawItem);
+
+    const bagTop = bag.topY, bagBottom = bag.topY + bag.bh;
+    items = items.filter(it => {
+      if(it.y > bagTop - 6 && it.y < bagBottom && it.x > bag.x && it.x < bag.x+bag.w){
+        score++; scoreEl.textContent = score;
+        if(score >= WIN_SCORE && !rewardGiven){ giveReward(); }
+        return false;
+      }
+      if(it.y > H+20){
+        misses++; missEl.textContent = misses;
+        if(misses >= MAX_MISSES){ running = false; }
+        return false;
+      }
+      return true;
+    });
+
+    if(running) requestAnimationFrame(loop);
+  }
+
+  function giveReward(){
+    rewardGiven = true;
+    const code = 'CATCH' + Math.floor(1000 + Math.random()*9000);
+    codeVal.textContent = code;
+    rewardBox.classList.add('show');
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'ArrowLeft') bag.x = Math.max(0, bag.x - bag.speed*4);
+    if(e.key === 'ArrowRight') bag.x = Math.min(W-bag.w, bag.x + bag.speed*4);
+  });
+  canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const scale = W / rect.width;
+    bag.x = Math.min(W-bag.w, Math.max(0, (e.clientX-rect.left)*scale - bag.w/2));
+  });
+  canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const scale = W / rect.width;
+    const t = e.touches[0];
+    bag.x = Math.min(W-bag.w, Math.max(0, (t.clientX-rect.left)*scale - bag.w/2));
+  }, { passive:false });
+
+  document.getElementById('restartBtn').addEventListener('click', () => { reset(); loop(); });
+
+  reset();
+  loop();
+})();
+</script>
+</body>
+</html>

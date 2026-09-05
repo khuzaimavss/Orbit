@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contact — ORBIT</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a href="index.html" class="brand"><span class="ring"></span>ORBIT</a>
+    <nav class="main-nav">
+      <a href="index.html">Home</a>
+      <a href="shop.html">Shop</a>
+      <a href="reviews.html">Reviews</a>
+      <a href="game.html">Game</a>
+      <a href="contact.html" class="active">Contact</a>
+    </nav>
+    <div style="display:flex; align-items:center; gap:14px;">
+      <a href="cart.html" class="cart-link">Cart (<span data-cart-count>0</span>)</a>
+      <button class="nav-toggle" aria-label="Menu">☰</button>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap" style="max-width:640px;">
+    <div class="eyebrow-num">Signal Orbit</div>
+    <h2 style="margin-bottom:26px;">Get in touch</h2>
+    <p style="color:var(--paper-dim); margin-bottom:34px;">Questions about fit, an order, or wholesale — send a message and we'll reply within a day.</p>
+    <form id="contactForm">
+      <div class="field"><label for="cName">Name</label><input id="cName" required></div>
+      <div class="field"><label for="cEmail">Email</label><input id="cEmail" type="email" required></div>
+      <div class="field"><label for="cMsg">Message</label><textarea id="cMsg" rows="5" required></textarea></div>
+      <button class="btn" type="submit">Send message</button>
+      <p id="sentMsg" style="display:none; color:var(--ion); margin-top:14px; font-size:0.9rem;">Thanks — we'll be in touch soon.</p>
+    </form>
+    <p style="margin-top:40px; font-size:0.9rem; color:var(--paper-dim);">Prefer WhatsApp? Message us directly from your <a href="cart.html" style="text-decoration:underline;">cart at checkout</a>.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 ORBIT. In constant motion.</span>
+    <a href="admin/login.html">Admin</a>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/store.js"></script>
+<script src="js/motion.js"></script>
+<script>
+  document.getElementById('contactForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    document.getElementById('contactForm').reset();
+    document.getElementById('sentMsg').style.display = 'block';
+  });
+</script>
+</body>
+</html>

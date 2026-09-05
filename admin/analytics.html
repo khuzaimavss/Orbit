@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analytics — ORBIT Admin</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<div class="admin-shell">
+  <div class="admin-side">
+    <a href="../index.html" class="brand"><span class="ring"></span>ORBIT</a>
+    <a href="products.html">Products</a>
+    <a href="analytics.html" class="active">Analytics</a>
+    <a href="bg-removal.html">Background Removal</a>
+    <a href="#" id="logoutLink">Log out</a>
+  </div>
+
+  <div class="admin-main">
+    <div class="admin-top">
+      <div>
+        <div class="eyebrow-num" style="border:none; margin:0;">Admin / Analytics</div>
+        <h2>Sales dashboard</h2>
+      </div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card"><span class="eyebrow-num" style="border:none; margin:0; padding:0;">Total orders</span><div class="stat-num" id="statOrders">0</div></div>
+      <div class="stat-card"><span class="eyebrow-num" style="border:none; margin:0; padding:0;">Total revenue</span><div class="stat-num" id="statRevenue">$0</div></div>
+      <div class="stat-card"><span class="eyebrow-num" style="border:none; margin:0; padding:0;">Avg. order value</span><div class="stat-num" id="statAvg">$0</div></div>
+      <div class="stat-card"><span class="eyebrow-num" style="border:none; margin:0; padding:0;">Best seller</span><div class="stat-num" id="statBest" style="font-size:1.3rem;">—</div></div>
+    </div>
+
+    <div class="chart-box">
+      <h3 style="margin-bottom:18px;">Orders — last 8 weeks</h3>
+      <canvas id="weekChart" height="90"></canvas>
+    </div>
+    <div class="chart-box">
+      <h3 style="margin-bottom:18px;">Revenue — last 6 months</h3>
+      <canvas id="monthChart" height="90"></canvas>
+    </div>
+    <div class="chart-box">
+      <h3 style="margin-bottom:18px;">Best-selling products</h3>
+      <table class="admin-table">
+        <thead><tr><th>Product</th><th>Units sold</th><th>Revenue</th></tr></thead>
+        <tbody id="bestSellerRows"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="../js/supabase-config.js"></script>
+<script src="../js/store.js"></script>
+<script src="../js/motion.js"></script>
+<script>
+(async function(){
+  STORE.requireAdmin('login.html');
+  document.getElementById('logoutLink').addEventListener('click', async (e) => {
+    e.preventDefault(); await STORE.adminLogout(); location.href = 'login.html';
+  });
+
+  const orders = await STORE.getOrders();
+
+  document.getElementById('statOrders').textContent = orders.length;
+  const revenue = orders.reduce((s,o) => s + o.total, 0);
+  document.getElementById('statRevenue').textContent = '$' + revenue.toFixed(0);
+  document.getElementById('statAvg').textContent = '$' + (orders.length ? (revenue/orders.length).toFixed(0) : '0');
+
+  // best seller tally
+  const tally = {};
+  orders.forEach(o => o.items.forEach(it => {
+    if(!tally[it.name]) tally[it.name] = { units:0, revenue:0 };
+    tally[it.name].units += it.qty;
+    tally[it.name].revenue += it.qty * it.price;
+  }));
+  const bestList = Object.entries(tally).sort((a,b) => b[1].units - a[1].units);
+  document.getElementById('statBest').textContent = bestList[0] ? bestList[0][0] : '—';
+  document.getElementById('bestSellerRows').innerHTML = bestList.length
+    ? bestList.map(([name,d]) => `<tr><td>${name}</td><td>${d.units}</td><td>$${d.revenue.toFixed(0)}</td></tr>`).join('')
+    : `<tr><td colspan="3" class="empty-note">No orders yet — sales data will appear here once customers check out.</td></tr>`;
+
+  // weekly buckets (last 8 weeks)
+  function weekLabel(d){
+    const onejan = new Date(d.getFullYear(),0,1);
+    const week = Math.ceil((((d - onejan) / 86400000) + onejan.getDay()+1)/7);
+    return `Wk ${week}`;
+  }
+  const now = new Date();
+  const weekBuckets = [];
+  for(let i=7;i>=0;i--){
+    const d = new Date(now); d.setDate(d.getDate() - i*7);
+    weekBuckets.push({ label: weekLabel(d), start: new Date(d.setDate(d.getDate()-d.getDay())) });
+  }
+  const weekCounts = weekBuckets.map((b,i) => {
+    const nextStart = i < weekBuckets.length-1 ? weekBuckets[i+1].start : new Date(8640000000000000);
+    return orders.filter(o => { const od = new Date(o.date); return od >= b.start && od < nextStart; }).length;
+  });
+
+  // monthly buckets (last 6 months)
+  const monthBuckets = [];
+  for(let i=5;i>=0;i--){
+    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    monthBuckets.push({ label: d.toLocaleString('default',{month:'short'}), y:d.getFullYear(), m:d.getMonth() });
+  }
+  const monthRevenue = monthBuckets.map(b => orders.filter(o => { const od = new Date(o.date); return od.getFullYear()===b.y && od.getMonth()===b.m; }).reduce((s,o)=>s+o.total,0));
+
+  const chartOpts = (color) => ({
+    borderColor: color, backgroundColor: color+'33', tension:0.25, fill:true, pointRadius:3
+  });
+
+  new Chart(document.getElementById('weekChart'), {
+    type:'bar',
+    data:{ labels: weekBuckets.map(b=>b.label), datasets:[{ label:'Orders', data: weekCounts, backgroundColor:'#33402E' }] },
+    options:{ plugins:{legend:{display:false}}, scales:{ y:{ beginAtZero:true, ticks:{precision:0} } } }
+  });
+
+  new Chart(document.getElementById('monthChart'), {
+    type:'line',
+    data:{ labels: monthBuckets.map(b=>b.label), datasets:[{ label:'Revenue', data: monthRevenue, ...chartOpts('#C08A2E') }] },
+    options:{ plugins:{legend:{display:false}}, scales:{ y:{ beginAtZero:true } } }
+  });
+})();
+</script>
+</body>
+</html>
